@@ -14,10 +14,10 @@ const page = () => {
       </h2>
       <p>To delete your data, you can:</p>
       <ul className="list-disc ml-6">
-        <li>Go to your account settings and select 'Delete Account'.</li>
+        <li>Go to your account settings and select &apos;Delete Account&apos;.</li>
         <li>
-          Email us at support@socialbridge.com with the subject 'Data Deletion
-          Request'.
+          Email us at support@socialbridge.com with the subject &apos;Data Deletion
+          Request&apos;.
         </li>
       </ul>
       <h2 className="text-2xl font-semibold mt-4">Processing Time</h2>
