@@ -26,11 +26,13 @@ export function SignUpModal({ open, onClose }: SignUpModalProps) {
     setLoading(true);
     try {
       await account.create(ID.unique(), email, password, name);
-      await account.createEmailSession(email, password);
-      onClose();
+      await account.createEmailPasswordSession(email, password);
       toast.success("Account created successfully");
-    } catch (error) {
-      toast.error("Failed to create account");
+      onClose();
+
+    } catch (error: any) {
+      console.error('Sign up error:', error);
+      toast.error(error?.message || "Failed to create account");
     } finally {
       setLoading(false);
     }

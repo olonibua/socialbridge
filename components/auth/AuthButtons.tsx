@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+
+import { useAuth } from "@/hooks/useAuth";
 import { SignInModal } from "./SignInModal";
 import { SignUpModal } from "./SignUpModal";
-import { useAuth } from "@/hooks/useAuth";
 
 export function AuthButtons() {
   const [showSignIn, setShowSignIn] = useState(false);
