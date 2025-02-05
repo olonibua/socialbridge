@@ -1,42 +1,102 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Icons } from "@/components/ui/icons";
-// import { Label } from "@/components/ui/label";
-// import { Switch } from "@/components/ui/switch";
-// import { postToLinkedIn } from "@/lib/social-integrations/linkedin";
-import React from "react";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { postToSocial } from "@/lib/social-integrations";
+import { SOCIAL_PLATFORMS, SocialPlatform } from "@/config/social-platforms";
+import { useSocialConnections } from "@/hooks/useSocialConnections";
+
+interface MediaFile {
+  file: File;
+  preview: string;
+  type: "image" | "video";
+}
 
 export default function PostCreator() {
   const [content, setContent] = useState("");
-  const [media, setMedia] = useState<File | null>(null);
-  // const [isPosting, setIsPosting] = useState(false);
-  // const [platforms, setPlatforms] = useState({
-  //   linkedin: false,
-  //   facebook: false,
-  //   instagram: false,
-  //   reddit: false,
-  // });
+  const [isPosting, setIsPosting] = useState(false);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<Set<SocialPlatform>>(
+    new Set()
+  );
+  const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { getAccessToken } = useSocialConnections();
 
-  // const handlePost = async () => {
-  //   if (!content.trim()) return;
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files) return;
 
-  //   setIsPosting(true);
-  //   try {
-  //     if (platforms.linkedin) {
-  //       await postToLinkedIn(content, "user_linkedin_access_token");
-  //     }
-  //     // Add other platforms
-  //     setContent("");
-  //     setMedia(null);
-  //   } catch (error) {
-  //     console.error("Post failed", error);
-  //   } finally {
-  //     setIsPosting(false);
-  //   }
-  // };
+    const newMediaFiles: MediaFile[] = [];
+    Array.from(files).forEach((file) => {
+      const type = file.type.startsWith("image/") ? "image" : "video";
+      newMediaFiles.push({
+        file,
+        preview: URL.createObjectURL(file),
+        type,
+      });
+    });
+
+    setMediaFiles([...mediaFiles, ...newMediaFiles]);
+  };
+
+  const handlePost = async () => {
+    if (!content.trim() && mediaFiles.length === 0) {
+      toast.error("Please add some content or media to post");
+      return;
+    }
+
+    if (selectedPlatforms.size === 0) {
+      toast.error("Please select at least one platform to post to");
+      return;
+    }
+
+    setIsPosting(true);
+    try {
+      const postPromises = Array.from(selectedPlatforms).map(async (platform) => {
+        const accessToken = getAccessToken(platform);
+        if (!accessToken) {
+          throw new Error(`Not connected to ${platform}`);
+        }
+
+        return postToSocial({
+          platform,
+          content: {
+            text: content,
+            media: mediaFiles.map((media) => ({
+              url: media.preview,
+              type: media.type,
+            })),
+          },
+          accessToken,
+        });
+      });
+
+      await Promise.all(postPromises);
+      setContent("");
+      setMediaFiles([]);
+      toast.success("Posted successfully!");
+    } catch (error) {
+      console.error("Failed to post:", error);
+      toast.error("Failed to post. Please try again.");
+    } finally {
+      setIsPosting(false);
+    }
+  };
+
+  const togglePlatform = (platform: SocialPlatform) => {
+    const newSelected = new Set(selectedPlatforms);
+    if (newSelected.has(platform)) {
+      newSelected.delete(platform);
+    } else {
+      newSelected.add(platform);
+    }
+    setSelectedPlatforms(newSelected);
+  };
 
   return (
     <Card>
@@ -54,79 +114,96 @@ export default function PostCreator() {
             onChange={(e) => setContent(e.target.value)}
             className="min-h-[120px]"
           />
-          <div className="flex items-center gap-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => document.getElementById("media-input")?.click()}
-              className="gap-2"
-            >
-              <Icons.image className="h-4 w-4" />
-              {media ? "Change Media" : "Add Media"}
-            </Button>
-            {media && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setMedia(null)}
-                className="text-destructive"
-              >
-                Remove Media
-              </Button>
-            )}
-            <input
-              id="media-input"
-              type="file"
-              accept="image/*,video/*"
-              onChange={(e) => setMedia(e.target.files?.[0] || null)}
-              className="hidden"
-            />
+          
+          {/* Media Preview */}
+          {mediaFiles.length > 0 && (
+            <div className="grid grid-cols-2 gap-2">
+              {mediaFiles.map((media, index) => (
+                <div key={index} className="relative">
+                  {media.type === "image" ? (
+                    <img
+                      src={media.preview}
+                      alt="Preview"
+                      className="rounded-md w-full h-32 object-cover"
+                    />
+                  ) : (
+                    <video
+                      src={media.preview}
+                      className="rounded-md w-full h-32 object-cover"
+                      controls
+                    />
+                  )}
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="absolute top-1 right-1"
+                    onClick={() => {
+                      const newMediaFiles = [...mediaFiles];
+                      newMediaFiles.splice(index, 1);
+                      setMediaFiles(newMediaFiles);
+                    }}
+                  >
+                    <Icons.close className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="space-y-4">
+            {Object.entries(SOCIAL_PLATFORMS).map(([key, value]) => {
+              const platform = key as SocialPlatform;
+              const Icon = Icons[value.name];
+              return (
+                <div
+                  key={platform}
+                  className="flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-2">
+                    <Icon className="h-4 w-4" />
+                    <Label htmlFor={platform}>{platform}</Label>
+                  </div>
+                  <Switch
+                    id={platform}
+                    checked={selectedPlatforms.has(platform)}
+                    onCheckedChange={() => togglePlatform(platform)}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
-
-        <div className="space-y-4">
-          <h3 className="font-medium">Post to Platforms</h3>
-          {/* <div className="grid gap-4 sm:grid-cols-2">
-            {Object.entries(platforms).map(([platform, isEnabled]) => (
-              <div
-                key={platform}
-                className="flex items-center justify-between rounded-lg border p-4"
-              >
-                <div className="flex items-center gap-2">
-                  {React.createElement(Icons[platform as keyof typeof Icons], {
-                    className: "h-4 w-4",
-                  })}
-                  <Label htmlFor={platform} className="capitalize">
-                    {platform}
-                  </Label>
-                </div>
-                <Switch
-                  id={platform}
-                  checked={isEnabled}
-                  onCheckedChange={(checked) =>
-                    setPlatforms((prev) => ({ ...prev, [platform]: checked }))
-                  }
-                />
-              </div>
-            ))}
-          </div> */}
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Icons.image className="mr-2 h-4 w-4" />
+            Add Media
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,video/*"
+            multiple
+            className="hidden"
+            onChange={handleFileSelect}
+          />
+          <Button
+            className="flex-1"
+            onClick={handlePost}
+            disabled={isPosting || (!content.trim() && mediaFiles.length === 0) || selectedPlatforms.size === 0}
+          >
+            {isPosting ? (
+              <>
+                <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                Posting...
+              </>
+            ) : (
+              "Post"
+            )}
+          </Button>
         </div>
-
-        {/* <Button
-          className="w-full"
-          size="lg"
-          onClick={handlePost}
-          disabled={!content.trim() || isPosting}
-        >
-          {isPosting ? (
-            <>
-              <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-              Posting...
-            </>
-          ) : (
-            "Post Now"
-          )}
-        </Button> */}
       </CardContent>
     </Card>
   );

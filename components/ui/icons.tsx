@@ -7,6 +7,7 @@ import {
   Edit,
   Link as Connection,
   Loader2,
+  X as Close,
 } from "lucide-react";
 
 export const Icons = {
@@ -18,4 +19,5 @@ export const Icons = {
   edit: Edit,
   connection: Connection,
   spinner: Loader2,
+  close: Close,
 } as const;

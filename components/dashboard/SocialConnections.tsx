@@ -1,126 +1,119 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Icons } from "@/components/ui/icons";
-import React from "react";
-
-interface PlatformConnection {
-  platform: string;
-  isConnected: boolean;
-  username?: string;
-  icon: keyof typeof Icons;
-}
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { Check } from "lucide-react";
+import { SOCIAL_PLATFORMS, SocialPlatform } from "@/config/social-platforms";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
+import { databases } from "@/config/appwrite";
+import { Query } from "appwrite";
+import { useSearchParams } from "next/navigation";
 
 export default function SocialConnections() {
   const { user } = useAuth();
-  const [connections, setConnections] = useState<PlatformConnection[]>([
-    { platform: "LinkedIn", isConnected: false, icon: "linkedin" },
-    { platform: "Facebook", isConnected: false, icon: "facebook" },
-    { platform: "Instagram", isConnected: false, icon: "instagram" },
-    { platform: "Reddit", isConnected: false, icon: "reddit" },
-  ]);
+  const searchParams = useSearchParams();
+  const [connections, setConnections] = useState<Record<SocialPlatform, boolean>>({
+    LINKEDIN: false,
+    FACEBOOK: false,
+    REDDIT: false,
+  });
+  const [loading, setLoading] = useState(true);
 
-  const handleConnect = async (platform: string) => {
-    console.log(`Connect to ${platform} - functionality temporarily disabled`);
+  useEffect(() => {
+    if (user) {
+      fetchConnections();
+    }
+  }, [user]);
 
-    // switch (platform.toLowerCase()) {
-    //   case "linkedin":
-    //     window.location.href = `/api/auth/linkedin?userId=${user?.id}`;
-    //     break;
-    //   case "facebook":
-    //     window.location.href = `/api/auth/facebook?userId=${user?.id}`;
-    //     break;
-    //   // Add other platforms similarly
-    // }
-  };
+  useEffect(() => {
+    const connection = searchParams.get("connection");
+    if (connection === "success") {
+      toast.success("Successfully connected!");
+      fetchConnections();
+    }
+  }, [searchParams]);
 
-  const handleDisconnect = async (platform: string) => {
+  const fetchConnections = async () => {
+    if (!user) return;
     try {
-      const response = await fetch(
-        `/api/disconnect/${platform.toLowerCase()}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ userId: user?.id }),
-        }
+      setLoading(true);
+      const response = await databases.listDocuments(
+        process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+        process.env.NEXT_PUBLIC_APPWRITE_SOCIAL_CONNECTIONS_COLLECTION_ID!,
+        [Query.equal("userId", user.id)]
       );
-
-      if (response.ok) {
-        setConnections((prev) =>
-          prev.map((conn) =>
-            conn.platform.toLowerCase() === platform.toLowerCase()
-              ? { ...conn, isConnected: false, username: undefined }
-              : conn
-          )
-        );
-      }
+      
+      const newConnections = { ...connections };
+      response.documents.forEach((doc) => {
+        newConnections[doc.platform as SocialPlatform] = true;
+      });
+      setConnections(newConnections);
     } catch (error) {
-      console.error(`Failed to disconnect ${platform}:`, error);
+      console.error("Failed to fetch connections:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    const fetchConnections = async () => {
-      if (!user?.id) return;
+  const handleConnect = async (platform: SocialPlatform) => {
+    if (!user) {
+      toast.error("Please sign in to connect social accounts");
+      return;
+    }
 
-      try {
-        const response = await fetch(`/api/connections/${user.id}`);
-        const data = await response.json();
-        setConnections(data);
-      } catch (error) {
-        console.error("Failed to fetch connections:", error);
-      }
-    };
-
-    fetchConnections();
-  }, [user?.id]);
+    try {
+      const url = `/api/auth/${platform.toLowerCase()}?userId=${user.id}`;
+      window.location.replace(url);
+    } catch (error) {
+      console.error(`Failed to connect to ${platform}:`, error);
+      toast.error(`Failed to connect to ${platform}`);
+    }
+  };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Icons.connection className="h-5 w-5" />
-          Connected Platforms
-        </CardTitle>
+        <CardTitle>Connected Accounts</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {connections.map(({ platform, isConnected, username, icon }) => {
+      <div className="p-6 space-y-4">
+        {Object.entries(SOCIAL_PLATFORMS).map(([key, value]) => {
+          const platform = key as SocialPlatform;
+          const isConnected = connections[platform];
+          
           return (
             <div
               key={platform}
-              className="flex items-center justify-between p-4 rounded-lg border bg-card/50 hover:bg-card/80 transition-colors"
+              className="flex items-center justify-between gap-4"
             >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 flex items-center justify-center rounded-full bg-muted">
-                  {React.createElement(Icons[icon], { className: "h-4 w-4" })}
-                </div>
-                <div>
-                  <h3 className="font-medium">{platform}</h3>
-                  {isConnected && username && (
-                    <p className="text-sm text-muted-foreground">@{username}</p>
-                  )}
-                </div>
+              <div className="flex items-center gap-2">
+                <span className="font-medium">{platform}</span>
               </div>
               <Button
-                variant={isConnected ? "destructive" : "default"}
-                size="sm"
-                onClick={() =>
-                  isConnected
-                    ? handleDisconnect(platform)
-                    : handleConnect(platform)
-                }
+                variant={isConnected ? "outline" : "default"}
+                onClick={() => handleConnect(platform)}
+                disabled={!user || loading}
+                className={isConnected ? "text-green-600" : ""}
               >
-                {isConnected ? "Disconnect" : "Connect"}
+                {isConnected ? (
+                  <>
+                    <Check className="mr-2 h-4 w-4" />
+                    Connected
+                  </>
+                ) : (
+                  "Connect"
+                )}
               </Button>
             </div>
           );
         })}
-      </CardContent>
+      </div>
+      {!user && (
+        <div className="px-6 pb-6 text-sm text-muted-foreground text-center">
+          Sign in to connect your social accounts
+        </div>
+      )}
     </Card>
   );
 }
