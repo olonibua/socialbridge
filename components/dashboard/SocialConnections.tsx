@@ -1,7 +1,7 @@
 "use client";
 
 import {  SocialPlatform } from "@/config/social-platforms";
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { toast } from "sonner";
 
 import { useSearchParams } from "next/navigation";
@@ -15,14 +15,14 @@ export default function SocialConnections() {
   const searchParams = useSearchParams();
   const { connections, loading, refreshConnections } = useSocialConnections();
 
-  const fetchConnections = async () => {
+  const fetchConnections = useCallback(async () => {
     if (!user) return;
     try {
       await refreshConnections();
     } catch (error) {
       console.error("Failed to fetch connections:", error);
     }
-  };
+  }, [user, refreshConnections]);
 
   useEffect(() => {
     if (user) {
