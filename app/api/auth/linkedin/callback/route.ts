@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 import { databases } from "@/config/appwrite";
-import { ID, Query } from "appwrite";
+import { ID } from "appwrite";
+
+interface ApiError extends Error {
+  response?: {
+    data?: unknown;
+  };
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -78,8 +84,9 @@ export async function GET(request: NextRequest) {
       headers: { 'Content-Type': 'text/html' },
     });
 
-  } catch (error: any) {
-    console.error("LinkedIn OAuth callback failed:", error.response?.data || error.message);
+  } catch (error: unknown) {
+    const err = error as ApiError;
+    console.error("LinkedIn OAuth callback failed:", err.response?.data || err.message);
     const html = `
       <!DOCTYPE html>
       <html>

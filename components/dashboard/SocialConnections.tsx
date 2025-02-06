@@ -15,6 +15,15 @@ export default function SocialConnections() {
   const searchParams = useSearchParams();
   const { connections, loading, refreshConnections } = useSocialConnections();
 
+  const fetchConnections = async () => {
+    if (!user) return;
+    try {
+      await refreshConnections();
+    } catch (error) {
+      console.error("Failed to fetch connections:", error);
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchConnections();
@@ -27,16 +36,7 @@ export default function SocialConnections() {
       toast.success("Successfully connected!");
       fetchConnections();
     }
-  }, [searchParams]);
-
-  const fetchConnections = async () => {
-    if (!user) return;
-    try {
-      await refreshConnections();
-    } catch (error) {
-      console.error("Failed to fetch connections:", error);
-    }
-  };
+  }, [searchParams, fetchConnections]);
 
   const handleConnect = async (platform: SocialPlatform) => {
     if (!user) {
@@ -52,7 +52,7 @@ export default function SocialConnections() {
     }
   };
 
-  const handleDisconnect = async (platform: SocialPlatform) => {
+  const handleDisconnect = async () => {
     await refreshConnections();
   };
 

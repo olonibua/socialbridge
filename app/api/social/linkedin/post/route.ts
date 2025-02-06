@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 
+interface ApiError extends Error {
+  response?: {
+    data?: unknown;
+    status?: number;
+  };
+}
+
 interface LinkedInPostData {
   author: string;
   lifecycleState: string;
@@ -151,11 +158,12 @@ export async function POST(request: NextRequest) {
     );
 
     return NextResponse.json(response.data);
-  } catch (error: any) {
-    console.error("LinkedIn post failed:", error.response?.data || error);
+  } catch (error: unknown) {
+    const err = error as ApiError;
+    console.error("LinkedIn post failed:", err.response?.data || err);
     return NextResponse.json(
-      { error: error.response?.data || error.message },
-      { status: error.response?.status || 500 }
+      { error: err.response?.data || err.message },
+      { status: err.response?.status || 500 }
     );
   }
 }

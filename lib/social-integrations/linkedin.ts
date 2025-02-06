@@ -26,22 +26,22 @@ export interface LinkedInPostData {
 
 export async function postToLinkedIn(content: PostContent, accessToken: string) {
   try {
-    const postData: LinkedInPostData = {
-      author: '',
-      lifecycleState: '',
-      specificContent: {
-        "com.linkedin.ugc.ShareContent": {
-          shareCommentary: {
-            text: ''
-          },
-          shareMediaCategory: '',
-          media: []
-        }
-      },
-      visibility: {
-        "com.linkedin.ugc.MemberNetworkVisibility": ''
-      }
-    };
+    // const postData: LinkedInPostData = {
+    //   author: '',
+    //   lifecycleState: '',
+    //   specificContent: {
+    //     "com.linkedin.ugc.ShareContent": {
+    //       shareCommentary: {
+    //         text: ''
+    //       },
+    //       shareMediaCategory: '',
+    //       media: []
+    //     }
+    //   },
+    //   visibility: {
+    //     "com.linkedin.ugc.MemberNetworkVisibility": ''
+    //   }
+    // };
     const response = await axios.post('/api/social/linkedin/post', {
       content,
       accessToken

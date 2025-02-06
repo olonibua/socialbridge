@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { getAccessToken, postToSocial } from "@/lib/social-integrations";
 import { SOCIAL_PLATFORMS, SocialPlatform } from "@/config/social-platforms";
-import { useSocialConnections } from "@/hooks/useSocialConnections";
 import { useAuth } from "@/hooks/useAuth";
 import { Upload } from "lucide-react";
 import Image from 'next/image';
@@ -21,7 +20,7 @@ export default function PostCreator() {
   const [selectedPlatforms, setSelectedPlatforms] = useState<Set<SocialPlatform>>(
     new Set()
   );
-  
+
   const { user } = useAuth();
 
   const uploadFile = async (file: File) => {
