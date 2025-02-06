@@ -21,7 +21,7 @@ export default function PostCreator() {
   const [selectedPlatforms, setSelectedPlatforms] = useState<Set<SocialPlatform>>(
     new Set()
   );
-  const { connections } = useSocialConnections();
+  
   const { user } = useAuth();
 
   const uploadFile = async (file: File) => {

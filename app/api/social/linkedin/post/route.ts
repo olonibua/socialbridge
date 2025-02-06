@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
-import { PostContent } from "@/lib/social-integrations";
 
 interface LinkedInPostData {
   author: string;

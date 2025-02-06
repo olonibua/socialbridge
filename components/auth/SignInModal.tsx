@@ -27,8 +27,10 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
       await login(email, password);
       onClose();
       toast.success("Signed in successfully");
-    } catch (error) {
-      toast.error("Failed to sign in");
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Sign in failed:', err);
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }
