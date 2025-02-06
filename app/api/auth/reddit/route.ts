@@ -11,16 +11,29 @@ export async function GET(request: NextRequest) {
 
     const state = `sb:${userId}`;
     const authUrl = new URL("https://www.reddit.com/api/v1/authorize");
-    authUrl.searchParams.append("response_type", "code");
-    authUrl.searchParams.append("client_id", process.env.REDDIT_CLIENT_ID!);
-    authUrl.searchParams.append("redirect_uri", process.env.REDDIT_REDIRECT_URI!);
-    authUrl.searchParams.append("state", state);
-    authUrl.searchParams.append("scope", "identity submit");
-    authUrl.searchParams.append("duration", "permanent");
+    
+    const scopes = [
+      'identity',
+      'submit',
+      'edit',
+      'flair',
+      'modposts',
+      'read',
+      'report',
+      'save',
+      'structuredstyles'  // Important for media uploads
+    ].join(' ');
 
-    return NextResponse.redirect(authUrl.toString());
+    authUrl.searchParams.append("client_id", process.env.REDDIT_CLIENT_ID!);
+    authUrl.searchParams.append("response_type", "code");
+    authUrl.searchParams.append("state", state);
+    authUrl.searchParams.append("redirect_uri", process.env.REDDIT_REDIRECT_URI!);
+    authUrl.searchParams.append("duration", "permanent");
+    authUrl.searchParams.append("scope", scopes);
+
+    return NextResponse.json({ authUrl: authUrl.toString() });
   } catch (error) {
     console.error("Reddit OAuth initialization failed:", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    return NextResponse.json({ error: "Failed to initialize OAuth" }, { status: 500 });
   }
 } 
