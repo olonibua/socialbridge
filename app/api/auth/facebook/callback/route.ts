@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
-import { saveTokens } from "@/utils/token-manager";
+import { databases } from "@/config/appwrite";
+import { ID } from "appwrite";
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,10 +10,9 @@ export async function GET(request: NextRequest) {
     const state = searchParams.get("state");
 
     if (!code || !state) {
-      return new NextResponse("Missing required parameters", { status: 400 });
+      return NextResponse.redirect(new URL("/dashboard?error=missing_params", request.url));
     }
 
-    // Extract userId from state
     const userId = state.replace("sb:", "");
 
     // Exchange code for access token
@@ -39,21 +39,25 @@ export async function GET(request: NextRequest) {
       }
     );
 
-    // Save tokens
-    await saveTokens(userId, {
-      platform: "FACEBOOK",
-      accessToken: tokenResponse.data.access_token,
-      expiresAt: new Date(Date.now() + tokenResponse.data.expires_in * 1000),
-      platformUserId: profileResponse.data.id,
-      username: profileResponse.data.name,
-    });
+    // Save to Appwrite
+    await databases.createDocument(
+      process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+      process.env.NEXT_PUBLIC_APPWRITE_SOCIAL_CONNECTIONS_COLLECTION_ID!,
+      ID.unique(),
+      {
+        userId,
+        platform: "FACEBOOK",
+        accessToken: tokenResponse.data.access_token,
+        isConnected: true,
+        platformUserId: profileResponse.data.id,
+        username: profileResponse.data.name,
+        expiresAt: new Date(Date.now() + tokenResponse.data.expires_in * 1000).toISOString(),
+      }
+    );
 
-    // Redirect back to app
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return NextResponse.redirect(new URL("/dashboard?connection=success", request.url));
   } catch (error) {
     console.error("Facebook OAuth callback failed:", error);
-    return NextResponse.redirect(
-      new URL("/dashboard?error=facebook_auth_failed", request.url)
-    );
+    return NextResponse.redirect(new URL("/dashboard?error=facebook_auth_failed", request.url));
   }
 } 

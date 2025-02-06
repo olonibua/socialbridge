@@ -1,24 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 import { databases } from "@/config/appwrite";
-import { ID } from "appwrite";
+import { ID, Query } from "appwrite";
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const code = searchParams.get("code");
     const state = searchParams.get("state");
-    const error = searchParams.get("error");
-
-    console.log("Callback received:", { code, state, error }); // Debug log
-
-    if (error) {
-      console.error("LinkedIn OAuth error:", error);
-      return NextResponse.redirect(new URL("/dashboard?error=linkedin_auth_failed", request.url));
-    }
 
     if (!code || !state) {
-      console.error("Missing required parameters");
       return NextResponse.redirect(new URL("/dashboard?error=missing_params", request.url));
     }
 
@@ -41,7 +32,15 @@ export async function GET(request: NextRequest) {
       }
     );
 
-    console.log("Token received"); // Debug log
+    // Get user profile with correct API version and fields
+    const profileResponse = await axios.get(
+      "https://api.linkedin.com/v2/userinfo",
+      {
+        headers: {
+          Authorization: `Bearer ${tokenResponse.data.access_token}`,
+        },
+      }
+    );
 
     // Save to Appwrite
     await databases.createDocument(
@@ -51,15 +50,54 @@ export async function GET(request: NextRequest) {
       {
         userId,
         platform: "LINKEDIN",
-        isConnected: true,
         accessToken: tokenResponse.data.access_token,
+        isConnected: true,
+        platformUserId: profileResponse.data.sub,
+        username: profileResponse.data.name,
         expiresAt: new Date(Date.now() + tokenResponse.data.expires_in * 1000).toISOString(),
       }
     );
 
-    return NextResponse.redirect(new URL("/dashboard?connection=success", request.url));
-  } catch (error) {
-    console.error("LinkedIn OAuth callback failed:", error);
-    return NextResponse.redirect(new URL("/dashboard?error=linkedin_auth_failed", request.url));
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <body>
+          <script>
+            if (window.opener) {
+              window.opener.location.href = '/dashboard?connection=success';
+              window.close();
+            } else {
+              window.location.href = '/dashboard?connection=success';
+            }
+          </script>
+        </body>
+      </html>
+    `;
+    
+    return new NextResponse(html, {
+      headers: { 'Content-Type': 'text/html' },
+    });
+
+  } catch (error: any) {
+    console.error("LinkedIn OAuth callback failed:", error.response?.data || error.message);
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <body>
+          <script>
+            if (window.opener) {
+              window.opener.location.href = '/dashboard?error=linkedin_auth_failed';
+              window.close();
+            } else {
+              window.location.href = '/dashboard?error=linkedin_auth_failed';
+            }
+          </script>
+        </body>
+      </html>
+    `;
+    
+    return new NextResponse(html, {
+      headers: { 'Content-Type': 'text/html' },
+    });
   }
-} 
+}

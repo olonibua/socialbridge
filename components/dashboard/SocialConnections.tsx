@@ -10,16 +10,13 @@ import { toast } from "sonner";
 import { databases } from "@/config/appwrite";
 import { Query } from "appwrite";
 import { useSearchParams } from "next/navigation";
+import { useSocialConnections } from "@/hooks/useSocialConnections";
+import SocialConnection from "./SocialConnection";
 
 export default function SocialConnections() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
-  const [connections, setConnections] = useState<Record<SocialPlatform, boolean>>({
-    LINKEDIN: false,
-    FACEBOOK: false,
-    REDDIT: false,
-  });
-  const [loading, setLoading] = useState(true);
+  const { connections, loading, refreshConnections } = useSocialConnections();
 
   useEffect(() => {
     if (user) {
@@ -38,22 +35,9 @@ export default function SocialConnections() {
   const fetchConnections = async () => {
     if (!user) return;
     try {
-      setLoading(true);
-      const response = await databases.listDocuments(
-        process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
-        process.env.NEXT_PUBLIC_APPWRITE_SOCIAL_CONNECTIONS_COLLECTION_ID!,
-        [Query.equal("userId", user.id)]
-      );
-      
-      const newConnections = { ...connections };
-      response.documents.forEach((doc) => {
-        newConnections[doc.platform as SocialPlatform] = true;
-      });
-      setConnections(newConnections);
+      await refreshConnections();
     } catch (error) {
       console.error("Failed to fetch connections:", error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -64,13 +48,20 @@ export default function SocialConnections() {
     }
 
     try {
-      const url = `/api/auth/${platform.toLowerCase()}?userId=${user.id}`;
-      window.location.replace(url);
+      window.location.href = `/api/auth/${platform.toLowerCase()}?userId=${user.id}`;
     } catch (error) {
       console.error(`Failed to connect to ${platform}:`, error);
       toast.error(`Failed to connect to ${platform}`);
     }
   };
+
+  const handleDisconnect = async (platform: SocialPlatform) => {
+    await refreshConnections();
+  };
+
+  if (loading) {
+    return <div>Loading connections...</div>;
+  }
 
   return (
     <Card>
@@ -78,36 +69,23 @@ export default function SocialConnections() {
         <CardTitle>Connected Accounts</CardTitle>
       </CardHeader>
       <div className="p-6 space-y-4">
-        {Object.entries(SOCIAL_PLATFORMS).map(([key, value]) => {
-          const platform = key as SocialPlatform;
-          const isConnected = connections[platform];
-          
-          return (
-            <div
-              key={platform}
-              className="flex items-center justify-between gap-4"
-            >
-              <div className="flex items-center gap-2">
-                <span className="font-medium">{platform}</span>
-              </div>
-              <Button
-                variant={isConnected ? "outline" : "default"}
-                onClick={() => handleConnect(platform)}
-                disabled={!user || loading}
-                className={isConnected ? "text-green-600" : ""}
-              >
-                {isConnected ? (
-                  <>
-                    <Check className="mr-2 h-4 w-4" />
-                    Connected
-                  </>
-                ) : (
-                  "Connect"
-                )}
-              </Button>
-            </div>
-          );
-        })}
+        <div className="space-y-3">
+          {Object.values(SocialPlatform).map((platform) => {
+            const connection = connections.find(
+              (conn) => conn.platform === platform
+            );
+            return (
+              <SocialConnection
+                key={platform}
+                platform={platform}
+                isConnected={!!connection?.isConnected}
+                connectionId={connection?.$id}
+                onConnect={handleConnect}
+                onDisconnect={handleDisconnect}
+              />
+            );
+          })}
+        </div>
       </div>
       {!user && (
         <div className="px-6 pb-6 text-sm text-muted-foreground text-center">

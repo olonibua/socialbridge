@@ -1,3 +1,9 @@
+export enum SocialPlatform {
+  LINKEDIN = "LINKEDIN",
+  FACEBOOK = "FACEBOOK",
+  REDDIT = "REDDIT"
+}
+
 export const SOCIAL_PLATFORMS = {
   LINKEDIN: {
     name: 'linkedin',
@@ -17,6 +23,4 @@ export const SOCIAL_PLATFORMS = {
     authUrl: 'https://www.reddit.com/api/v1/authorize',
     tokenUrl: 'https://www.reddit.com/api/v1/access_token',
   }
-} as const;
-
-export type SocialPlatform = keyof typeof SOCIAL_PLATFORMS; 
+} as const; 
