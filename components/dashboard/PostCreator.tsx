@@ -12,12 +12,7 @@ import { SOCIAL_PLATFORMS, SocialPlatform } from "@/config/social-platforms";
 import { useSocialConnections } from "@/hooks/useSocialConnections";
 import { useAuth } from "@/hooks/useAuth";
 import { Upload } from "lucide-react";
-
-interface MediaFile {
-  file: File;
-  preview: string;
-  type: "image" | "video";
-}
+import Image from 'next/image';
 
 export default function PostCreator() {
   const [content, setContent] = useState("");
@@ -143,9 +138,11 @@ export default function PostCreator() {
             <div className="flex gap-2 flex-wrap">
               {media.map((file, index) => (
                 <div key={index} className="relative">
-                  <img
+                  <Image 
                     src={URL.createObjectURL(file)}
                     alt={`Upload ${index + 1}`}
+                    width={200}
+                    height={200}
                     className="h-20 w-20 object-cover rounded"
                   />
                   <button

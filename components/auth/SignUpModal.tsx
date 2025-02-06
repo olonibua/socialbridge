@@ -30,9 +30,10 @@ export function SignUpModal({ open, onClose }: SignUpModalProps) {
       toast.success("Account created successfully");
       onClose();
 
-    } catch (error: any) {
-      console.error('Sign up error:', error);
-      toast.error(error?.message || "Failed to create account");
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Sign up failed:', err);
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }

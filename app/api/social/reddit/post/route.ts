@@ -24,11 +24,11 @@ export async function POST(request: NextRequest) {
     );
 
     return NextResponse.json(response.data);
-  } catch (error: any) {
-    console.error('Reddit post failed:', error.response?.data || error);
+  } catch (error: Error) {
+    console.error('Reddit post failed:', error);
     return NextResponse.json(
-      { error: error.response?.data || error.message },
-      { status: error.response?.status || 500 }
+      { error: error.message },
+      { status: 500 }
     );
   }
 }

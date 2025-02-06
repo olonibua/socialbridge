@@ -1,16 +1,13 @@
 "use client";
 
-import { useAuth } from "@/hooks/useAuth";
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check } from "lucide-react";
-import { SOCIAL_PLATFORMS, SocialPlatform } from "@/config/social-platforms";
-import { useState, useEffect } from "react";
+import {  SocialPlatform } from "@/config/social-platforms";
+import { useEffect } from "react";
 import { toast } from "sonner";
-import { databases } from "@/config/appwrite";
-import { Query } from "appwrite";
+
 import { useSearchParams } from "next/navigation";
 import { useSocialConnections } from "@/hooks/useSocialConnections";
+import { useAuth } from "@/hooks/useAuth";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import SocialConnection from "./SocialConnection";
 
 export default function SocialConnections() {
