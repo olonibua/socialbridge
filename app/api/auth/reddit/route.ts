@@ -10,20 +10,9 @@ export async function GET(request: NextRequest) {
     }
 
     const state = `sb:${userId}`;
-    const authUrl = new URL("https://www.reddit.com/api/v1/authorize");
+    const scopes = "identity submit edit";
     
-    const scopes = [
-      'identity',
-      'submit',
-      'edit',
-      'flair',
-      'modposts',
-      'read',
-      'report',
-      'save',
-      'structuredstyles'  // Important for media uploads
-    ].join(' ');
-
+    const authUrl = new URL("https://www.reddit.com/api/v1/authorize");
     authUrl.searchParams.append("client_id", process.env.REDDIT_CLIENT_ID!);
     authUrl.searchParams.append("response_type", "code");
     authUrl.searchParams.append("state", state);
@@ -31,7 +20,8 @@ export async function GET(request: NextRequest) {
     authUrl.searchParams.append("duration", "permanent");
     authUrl.searchParams.append("scope", scopes);
 
-    return NextResponse.json({ authUrl: authUrl.toString() });
+    // Redirect instead of returning JSON
+    return NextResponse.redirect(authUrl.toString());
   } catch (error) {
     console.error("Reddit OAuth initialization failed:", error);
     return NextResponse.json({ error: "Failed to initialize OAuth" }, { status: 500 });
